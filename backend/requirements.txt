@@ -1,0 +1,10 @@
+fastapi>=0.110,<1.0
+pydantic>=2.6,<3.0
+supabase>=2.4,<3.0
+pyjwt>=2.8,<3.0
+email-validator>=2.1,<3.0
+uvicorn>=0.29,<1.0
+
+# test-only, but ci.yml installs everything from this one file
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0

@@ -1,0 +1,13 @@
+name: keepalive
+on:
+  schedule:
+    - cron: "0 6 */3 * *"   # every 3 days
+  workflow_dispatch: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: replace with your real deployed domain — frontend and backend
+      # share one domain under Vercel Services (see /vercel.json), so this
+      # is your site's own URL, not a separate backend URL.
+      - run: curl -f https://<your-project>.vercel.app/api/backend/health
