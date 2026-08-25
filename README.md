@@ -76,4 +76,4 @@ npm run dev
 
 If `npm run dev` is slow or unstable on a low-RAM machine, you don't strictly
 need it day to day — Vercel builds and previews every push in the cloud, so
-small edits can go straight to a git commit + push instead of a local server.
+small edits can go straight to a git commit + push instead of a local server. it okay the file 
