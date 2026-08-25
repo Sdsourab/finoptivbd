@@ -8,8 +8,8 @@ function hostnameOf(url: string): string {
   }
 }
 
-// The whole point of an external-link article: get to the real thing in one
-// more click, from a page that still has its own URL and OG preview.
+// the fist 
+// more click, from a page that still has its own URL and OG preview.fibal sttsfg
 export function ExternalArticleCTA({ url }: { url: string }) {
   return (
     <a
