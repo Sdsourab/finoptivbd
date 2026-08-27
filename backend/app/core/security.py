@@ -1,7 +1,10 @@
+from functools import lru_cache
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client
 import jwt
+from jwt import PyJWKClient
 
 from app.core.config import settings
 from app.db.supabase_client import get_supabase
@@ -9,7 +12,42 @@ from app.db.supabase_client import get_supabase
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+@lru_cache
+def _get_jwks_client() -> PyJWKClient:
+    """Supabase's public keys for its newer asymmetric (ES256/RS256) signing
+    keys system. Cached (lru_cache + PyJWKClient's own internal caching) so
+    this doesn't fetch the JWKS on every single request.
+    """
+    jwks_url = f"{settings.supabase_url}/auth/v1/jwks"
+    return PyJWKClient(jwks_url, cache_keys=True)
+
+
 def _decode_token(token: str) -> dict:
+    """Verifies a Supabase-issued access token.
+
+    Supabase now supports two different ways of signing tokens depending on
+    project settings/age:
+      1. Newer projects: asymmetric JWT Signing Keys (ES256/RS256) — verified
+         against the project's public JWKS endpoint, no shared secret needed.
+      2. Older / legacy projects: a single shared secret (HS256) —
+         SUPABASE_JWT_SECRET.
+
+    There's no reliable way to know in advance which one a given project
+    uses, so this tries the modern JWKS approach first and falls back to the
+    legacy shared secret. Whichever one actually matches the token succeeds;
+    the other attempt just fails silently and isn't the real error.
+    """
+    try:
+        signing_key = _get_jwks_client().get_signing_key_from_jwt(token)
+        return jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["ES256", "RS256"],
+            audience="authenticated",
+        )
+    except Exception:
+        pass
+
     try:
         return jwt.decode(
             token,
