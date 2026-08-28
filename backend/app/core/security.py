@@ -17,9 +17,17 @@ def _get_jwks_client() -> PyJWKClient:
     """Supabase's public keys for its newer asymmetric (ES256/RS256) signing
     keys system. Cached (lru_cache + PyJWKClient's own internal caching) so
     this doesn't fetch the JWKS on every single request.
+
+    Supabase's API gateway rejects ANY request — including this one — that
+    doesn't carry an `apikey` header, JWKS included. The service-role key
+    (already available server-side) works fine for this.
     """
     jwks_url = f"{settings.supabase_url}/auth/v1/jwks"
-    return PyJWKClient(jwks_url, cache_keys=True)
+    return PyJWKClient(
+        jwks_url,
+        cache_keys=True,
+        headers={"apikey": settings.supabase_service_role_key},
+    )
 
 
 def _decode_token(token: str) -> dict:
