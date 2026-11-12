@@ -1,23 +1,13 @@
-"""
-Covers the minimum bar from docs/03-BACKEND-SPEC.md:
-  - GET /articles returns only published rows
-  - GET /articles?content_type=blog_post returns only blog posts
-  - POST /admin/articles without a valid token returns 401
-  - POST /admin/articles with status=published and no business_implication
-    (case study) returns 422
+"""Backend tests using a small in-memory Supabase query-builder fake."""
 
-Uses a small fake standing in for the supabase-py query builder, injected via
-FastAPI's dependency_overrides. This means CI can run `pytest` green with
-zero real Supabase credentials (ci.yml sets none) — the fake IS the test
-fixture, not a mock of one.
-"""
+import uuid
+from datetime import datetime
 
 from fastapi.testclient import TestClient
 
 from app.core.security import get_current_admin
 from app.db.supabase_client import get_supabase
 from app.main import app
-import uuid
 
 
 class _FakeResult:
@@ -26,10 +16,6 @@ class _FakeResult:
 
 
 class _FakeQuery:
-    """Minimal chainable stand-in for postgrest-py's query builder. Filter/
-    order/range/limit calls narrow an in-memory list; execute() returns it.
-    """
-
     def __init__(self, rows: list[dict]):
         self._rows = rows
 
@@ -37,15 +23,15 @@ class _FakeQuery:
         return self
 
     def eq(self, field, value):
-        self._rows = [r for r in self._rows if r.get(field) == value]
+        self._rows = [row for row in self._rows if row.get(field) == value]
         return self
 
     def neq(self, field, value):
-        self._rows = [r for r in self._rows if r.get(field) != value]
+        self._rows = [row for row in self._rows if row.get(field) != value]
         return self
 
     def in_(self, field, values):
-        self._rows = [r for r in self._rows if r.get(field) in values]
+        self._rows = [row for row in self._rows if row.get(field) in values]
         return self
 
     def or_(self, *_args, **_kwargs):
@@ -87,17 +73,16 @@ class FakeSupabase:
         return _FakeQuery(list(self._tables.get(name, [])))
 
     def rpc(self, name: str, params: dict):
-        """Stands in for the search_articles() Postgres function (see
-        migration 0002) — real trigram ranking obviously isn't available
-        here, so this does a plain substring match, just enough to test the
-        endpoint's plumbing (auth-free, published-only, calls through RPC).
-        """
         if name == "search_articles":
-            q = params.get("search_query", "").lower()
+            query = params.get("search_query", "").lower()
             rows = [
-                a
-                for a in self._tables.get("articles", [])
-                if a.get("status") == "published" and (q in a.get("title", "").lower() or q in a.get("excerpt", "").lower())
+                article
+                for article in self._tables.get("articles", [])
+                if article.get("status") == "published"
+                and (
+                    query in article.get("title", "").lower()
+                    or query in article.get("excerpt", "").lower()
+                )
             ]
             return _FakeQuery(rows)
         return _FakeQuery([])
@@ -150,6 +135,7 @@ def _client_with_fake_db() -> TestClient:
         {
             "articles": [PUBLISHED_CASE_STUDY, PUBLISHED_BLOG_POST, DRAFT_BLOG_POST],
             "article_stats": [],
+            "methodologies": [],
         }
     )
     app.dependency_overrides[get_supabase] = lambda: fake
@@ -161,38 +147,37 @@ def teardown_function():
 
 
 def test_list_articles_returns_only_published():
-    client = _client_with_fake_db()
-    response = client.get("/api/backend/articles")
+    response = _client_with_fake_db().get("/api/backend/articles")
     assert response.status_code == 200
-    slugs = {a["slug"] for a in response.json()}
-    assert slugs == {"uni-sync", "how-i-built-this"}
+    assert {item["slug"] for item in response.json()} == {"uni-sync", "how-i-built-this"}
 
 
 def test_list_articles_filters_by_content_type():
-    client = _client_with_fake_db()
-    response = client.get("/api/backend/articles", params={"content_type": "blog_post"})
+    response = _client_with_fake_db().get(
+        "/api/backend/articles", params={"content_type": "blog_post"}
+    )
     assert response.status_code == 200
-    body = response.json()
-    assert [a["slug"] for a in body] == ["how-i-built-this"]
+    assert [item["slug"] for item in response.json()] == ["how-i-built-this"]
 
 
 def test_create_article_without_token_is_unauthorized():
-    client = _client_with_fake_db()
-    response = client.post("/api/backend/admin/articles", json={"title": "New", "slug": "new", "excerpt": "e"})
+    response = _client_with_fake_db().post(
+        "/api/backend/admin/articles",
+        json={"title": "New", "slug": "new", "excerpt": "e"},
+    )
     assert response.status_code == 401
 
 
 def test_search_finds_published_articles_by_title():
-    client = _client_with_fake_db()
-    response = client.get("/api/backend/search", params={"q": "uni"})
+    response = _client_with_fake_db().get("/api/backend/search", params={"q": "uni"})
     assert response.status_code == 200
-    slugs = [a["slug"] for a in response.json()]
-    assert "uni-sync" in slugs
+    assert "uni-sync" in [item["slug"] for item in response.json()]
 
 
 def test_create_service_requires_auth():
-    client = _client_with_fake_db()
-    response = client.post("/api/backend/admin/services", json={"name": "X", "description": "Y"})
+    response = _client_with_fake_db().post(
+        "/api/backend/admin/services", json={"name": "X", "description": "Y"}
+    )
     assert response.status_code == 401
 
 
@@ -200,7 +185,10 @@ def test_create_service_with_auth_succeeds():
     client = _client_with_fake_db()
     app.dependency_overrides[get_current_admin] = lambda: "test-admin-id"
     try:
-        response = client.post("/api/backend/admin/services", json={"name": "Test service", "description": "desc"})
+        response = client.post(
+            "/api/backend/admin/services",
+            json={"name": "Test service", "description": "desc"},
+        )
     finally:
         app.dependency_overrides.pop(get_current_admin, None)
     assert response.status_code == 201
@@ -208,8 +196,7 @@ def test_create_service_with_auth_succeeds():
 
 
 def test_admin_list_articles_requires_auth():
-    client = _client_with_fake_db()
-    response = client.get("/api/backend/admin/articles")
+    response = _client_with_fake_db().get("/api/backend/admin/articles")
     assert response.status_code == 401
 
 
@@ -221,9 +208,11 @@ def test_admin_list_articles_returns_all_statuses():
     finally:
         app.dependency_overrides.pop(get_current_admin, None)
     assert response.status_code == 200
-    slugs = {a["slug"] for a in response.json()}
-    # unlike the public endpoint, this includes the draft
-    assert slugs == {"uni-sync", "how-i-built-this", "draft-post"}
+    assert {item["slug"] for item in response.json()} == {
+        "uni-sync",
+        "how-i-built-this",
+        "draft-post",
+    }
 
 
 def test_publish_case_study_without_business_implication_is_rejected():
@@ -243,3 +232,33 @@ def test_publish_case_study_without_business_implication_is_rejected():
     finally:
         app.dependency_overrides.pop(get_current_admin, None)
     assert response.status_code == 422
+
+
+def test_health_checks_database_connectivity():
+    response = _client_with_fake_db().get("/api/backend/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "database": "ok"}
+
+
+def test_publishing_sets_a_real_iso_timestamp():
+    client = _client_with_fake_db()
+    app.dependency_overrides[get_current_admin] = lambda: "test-admin-id"
+    try:
+        response = client.post(
+            "/api/backend/admin/articles",
+            json={
+                "content_type": "case_study",
+                "title": "Timestamp test",
+                "slug": "timestamp-test",
+                "excerpt": "Test excerpt",
+                "business_implication": "A meaningful impact.",
+                "status": "published",
+            },
+        )
+    finally:
+        app.dependency_overrides.pop(get_current_admin, None)
+
+    assert response.status_code == 201
+    published_at = response.json()["published_at"]
+    assert published_at
+    datetime.fromisoformat(published_at.replace("Z", "+00:00"))

@@ -1,30 +1,28 @@
-from fastapi import APIRouter, FastAPI
+import logging
+
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from supabase import Client
 
 from app.core.config import settings
+from app.db.supabase_client import get_supabase
 from app.routers import admin, articles, categories, downloads, gallery, methodologies, pipeline, predictions, search, services
 
-# Deployed as a Vercel Service (see /vercel.json at the repo root) sharing
-# one domain with the frontend. The root vercel.json only exposes the
-# "/api/backend/*" path publicly and routes it here — but it forwards the
-# ORIGINAL, unstripped path to this service, not a shortened one. So every
-# route in this app has to actually live under /api/backend, including the
-# docs, or it's simply unreachable from the outside.
+logger = logging.getLogger(__name__)
+
+# Vercel Services forwards the original path, so routes stay under this prefix.
 API_PREFIX = "/api/backend"
 
 app = FastAPI(
     title="Finoptiv API",
-    version="0.1.0",
+    version="0.2.0",
     docs_url=f"{API_PREFIX}/docs",
     openapi_url=f"{API_PREFIX}/openapi.json",
 )
 
-# Same-origin under Vercel Services, so this mostly matters for local dev
-# where the backend may run on its own port (e.g. via `uvicorn` directly
-# instead of `vercel dev`).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins or ["*"],
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,11 +42,21 @@ api_router.include_router(admin.router)
 
 
 @api_router.get("/health", tags=["meta"])
-def health():
-    """Keep-alive ping target — see .github/workflows/keepalive.yml.
-    Reachable at /api/backend/health once deployed.
+def health(supabase: Client = Depends(get_supabase)):
+    """Readiness check that verifies real database connectivity.
+
+    The keep-alive workflow calls this route. A no-op health response would
+    keep Vercel warm but would not count as database activity for Supabase.
     """
-    return {"status": "ok"}
+    try:
+        supabase.table("methodologies").select("id").limit(1).execute()
+    except Exception as exc:
+        logger.exception("Supabase database health check failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Supabase database is unavailable. Verify project status and run all database migrations.",
+        ) from exc
+    return {"status": "ok", "database": "ok"}
 
 
 app.include_router(api_router)

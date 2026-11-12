@@ -15,5 +15,8 @@ backend/.venv/
 *.env
 !.env.example
 
+# Local repair backups (never commit copies of replaced files)
+/.finoptiv-backup/
+
 # OS
 .DS_Store

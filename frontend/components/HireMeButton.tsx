@@ -10,11 +10,12 @@ interface HireMeButtonProps {
   size?: "default" | "small";
 }
 
-// One visual language, one behavior, everywhere this appears (nav, footer,
-// mobile bar, contact sidebar) — a visitor should never wonder if two
-// "Hire Me" buttons do different things.
 export function HireMeButton({ pageTitle, fullWidth, size = "default" }: HireMeButtonProps) {
   const [copied, setCopied] = useState(false);
+
+  // Do not render a broken mailto link when the deployment email is unset.
+  if (!OWNER_EMAIL) return null;
+
   const subject = pageTitle ? `Portfolio inquiry — ${pageTitle}` : "Portfolio inquiry";
   const mailtoHref = `mailto:${OWNER_EMAIL}?subject=${encodeURIComponent(subject)}`;
 
@@ -24,7 +25,7 @@ export function HireMeButton({ pageTitle, fullWidth, size = "default" }: HireMeB
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // mailto above still works regardless — this is a fallback, not the only path.
+      // The mailto link remains available if clipboard access is blocked.
     }
   }
 

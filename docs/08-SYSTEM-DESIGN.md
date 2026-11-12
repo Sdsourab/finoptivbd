@@ -1,81 +1,57 @@
-# Finoptiv — Project Blueprint (08: System Design)
+# Finoptiv — System Design (current implementation)
 
-> This file serves two purposes: it's the internal architecture reference for whoever builds this, and its content is what the public `/system-design` page renders for visitors (see `04`). Write and edit it for a technical reader, not just as internal notes.
-
-## Why this page exists
-
-The single most direct way to prove real engineering happened on a portfolio site is to explain, precisely, how it works. This page turns the architecture itself into content, aimed at the technical recruiters and researchers who are Finoptiv's primary audience (see `00`).
+This document describes the architecture configured in the repository. The public `/system-design` route renders a visitor-friendly version.
 
 ## High-level architecture
 
-```
-                        ┌─────────────────────┐
-   Visitor's browser ──▶│   Vercel Edge/CDN    │
-                        └──────────┬───────────┘
-                                   │  static/ISR HTML for public pages
-                                   ▼
-                        ┌─────────────────────┐
-                        │  Next.js (frontend)  │  Vercel project A
-                        │  App Router + ISR    │
-                        └──────────┬───────────┘
-                                   │  JSON, only on cache miss / admin actions
-                                   ▼
-                        ┌─────────────────────┐
-                        │  FastAPI (backend)   │  Vercel project B
-                        │  Python serverless   │  (stateless, cold-start per call)
-                        └──────────┬───────────┘
-                                   │  Postgres wire protocol, service-role key
-                                   ▼
-                        ┌─────────────────────┐
-                        │      Supabase        │
-                        │  Postgres + Auth +   │
-                        │      Storage         │
-                        └─────────────────────┘
+```text
+Visitor browser
+      |
+Vercel Edge / CDN
+      |
+One Vercel project (`vercel.json`)
+      |-- `frontend/`: Next.js App Router service
+      `-- `backend/`: FastAPI Python service at `/api/backend/*`
+                    |
+              Supabase: Postgres + Auth + Storage
 ```
 
-Two independently deployed Vercel projects from one GitHub monorepo (`06`) — frontend and backend scale, fail, and redeploy independently.
+The frontend and backend are independent services in one Vercel project and share one public domain. Top-level rewrites send `/api/backend/*` requests to FastAPI and all other routes to Next.js. This differs from the original plan's two-project deployment model.
 
-## Request lifecycle — reading a case study
+## Public read lifecycle
 
-1. Visitor requests `/work/uni-sync`.
-2. Vercel Edge serves the statically generated HTML for that slug if the ISR cache (60s window, `04`) hasn't expired — no backend call at all on the common path.
-3. On a cache miss (first request after a content edit), Next.js server-renders the page, calling `GET /articles/uni-sync` and `GET /articles/uni-sync/related` on the FastAPI backend.
-4. FastAPI queries Supabase using the service-role key, but the query itself is still shaped by the same rules RLS would enforce (only `published` rows are ever selected) — RLS is the actual security boundary; the API layer doesn't rely on remembering to filter correctly.
-5. Response returns with `Cache-Control` headers (`03`) so Vercel's edge can cache it too, independent of the frontend's own ISR cache.
-6. Rendered HTML streams to the visitor; the illustrated/retro component bundle is never fetched, because this route doesn't import it (`04`).
+1. A visitor requests `/work/{slug}` or `/writing/{slug}`.
+2. Next.js serves the cached page when available; public content routes revalidate every 60 seconds.
+3. On a cache miss, the server calls the matching FastAPI route under `/api/backend/`.
+4. FastAPI reads published content from Supabase and returns typed JSON.
+5. The page is rendered and cached for subsequent visitors.
 
-## Request lifecycle — admin publishes an edit
+## Admin write lifecycle
 
-1. Owner logs in at `/admin` via Supabase Auth; a JWT is issued and held client-side.
-2. Owner edits an article, clicks Publish; the frontend sends `PUT /admin/articles/{id}` with the JWT as a bearer token.
-3. FastAPI's `get_current_admin` dependency (`03`) verifies the JWT against Supabase's JWKS and confirms the user is in the `admins` table — reject with `401` otherwise.
-4. Pydantic validates the body (`03`); e.g. a case study can't be set to `published` without `business_implication` filled in.
-5. Supabase RLS additionally requires the write to come from a row in `admins` — a second, independent check, so a bug in the API auth logic alone can't grant a write.
-6. On success, the public page's ISR cache picks up the change within 60 seconds — no manual redeploy needed for a content edit.
+1. The owner signs in with Supabase Auth.
+2. The browser obtains an access token and sends it as a Bearer token to `/api/backend/admin/*`.
+3. FastAPI verifies Supabase's asymmetric JWKS token, or legacy HS256 signing where configured, and checks the user ID against `public.admins` using a backend-only secret key.
+4. Pydantic validates write payloads.
+5. The backend uses a privileged secret key that bypasses Postgres RLS. Therefore, FastAPI JWT verification and the `public.admins` membership check are the authorization gate for these API writes. The secret key is never exposed to the browser.
 
-## Security model, summarized
+## Security
 
-| Layer | Mechanism |
-|---|---|
-| Admin identity | Supabase Auth (JWT), single owner account, no public sign-up |
-| API-level authorization | `get_current_admin` FastAPI dependency, verified per-request |
-| Database-level authorization | Postgres RLS — the real boundary; holds even if the API layer has a bug |
-| Input validation | Pydantic schemas on every write; conditional required-field rules for publish state |
-| Secret isolation | `SUPABASE_SERVICE_ROLE_KEY` lives only in the backend's Vercel env, never in a `NEXT_PUBLIC_*` variable or the frontend bundle |
-| Storage | Public bucket for images; private bucket for gated datasets, served only via short-lived signed URLs |
+- Supabase public publishable key is for the browser; the secret key is backend-only and bypasses RLS.
+- The backend public-read queries explicitly filter to published rows. Postgres RLS also restricts requests made with the browser publishable key; the backend secret key bypasses RLS by design.
+- User-scoped admin write policies call `public.is_finoptiv_admin()`, a narrowly scoped `SECURITY DEFINER` function that can read the otherwise private `admins` table. FastAPI admin endpoints enforce their own JWT and membership checks because their server-side secret key bypasses RLS.
+- The `article-images` bucket is public for image reads, while upload/update/delete are admin-only. The `datasets` bucket stays private.
+- Public sign-up should be disabled after the owner account is created.
 
-This is a direct, deliberate reversal of the v1 site's model, where the admin password lived in client-side JavaScript.
+## Performance and reliability
 
-## Performance strategy, summarized
+- Public article pages use Next.js ISR with a 60-second revalidation window.
+- FastAPI public responses include cache headers; article stats are batch-fetched rather than queried once per article.
+- `next/font` serves the configured fonts without an external render-blocking font request.
+- The `/api/backend/health` endpoint verifies a real Supabase read, not only that the API process is alive.
+- A scheduled GitHub Action can invoke the health endpoint several times daily. Supabase says a few daily database requests are usually enough to avoid inactivity pausing, but this is not guaranteed.
 
-Full detail in `04` — the headline points, for a reader here:
-- Public content pages are statically generated with ISR; most requests never reach the backend.
-- The illustrated/retro UI is code-split and only loads on the pages that use it.
-- Images are served through `next/image` with explicit dimensions; fonts are self-hosted and non-blocking.
-- Backend responses carry cache headers so even a cache-miss request resolves fast at the edge.
+## Runtime endpoints
 
-## Reliability on a free tier
-
-- Both Vercel functions and the frontend are stateless — no server to keep alive in the traditional sense.
-- The one real free-tier risk is Supabase pausing after inactivity; mitigated by a scheduled GitHub Action ping (`07`), not a paid always-on plan.
-- RLS means that even if the FastAPI layer were temporarily misconfigured, unpublished content still can't leak — defense in depth, not a single point of failure.
+- API health: `/api/backend/health`
+- OpenAPI JSON: `/api/backend/openapi.json`
+- Interactive API docs: `/api/backend/docs`

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,7 +13,16 @@ from app.schemas.gallery import GalleryItemCreate, GalleryItemOut, GalleryItemUp
 from app.schemas.prediction import PredictionCreate, PredictionOut, PredictionResolve
 from app.schemas.service import ServiceCreate, ServiceOut, ServiceUpdate
 
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(get_current_admin)])
+router = APIRouter(
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_current_admin)],
+)
+
+
+def _utc_now_iso() -> str:
+    """Return an actual ISO-8601 timestamp accepted by PostgREST."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 # ---- Articles ----
@@ -35,7 +45,9 @@ def admin_get_article(article_id: UUID, supabase: Client = Depends(get_supabase)
 def create_article(payload: ArticleCreate, supabase: Client = Depends(get_supabase)):
     data = payload.model_dump(mode="json", exclude_none=True)
     if data.get("status") == "published":
-        data["published_at"] = "now()"
+        # Do not send the SQL expression "now()" as a JSON string. PostgREST
+        # expects an ISO-8601 timestamp value here.
+        data["published_at"] = _utc_now_iso()
     result = supabase.table("articles").insert(data).execute()
     return {**result.data[0], "stats": []}
 
@@ -56,7 +68,7 @@ def update_article(article_id: UUID, payload: ArticleUpdate, supabase: Client = 
         if merged.get("content_type") == "blog_post" and not merged.get("body_markdown"):
             raise HTTPException(status_code=422, detail="body_markdown is required to publish a blog post")
     if merged.get("status") == "published" and current.get("status") != "published":
-        updates["published_at"] = "now()"
+        updates["published_at"] = _utc_now_iso()
 
     result = supabase.table("articles").update(updates).eq("id", str(article_id)).execute()
     return batch_attach_stats(supabase, result.data)[0]
@@ -94,7 +106,7 @@ def resolve_prediction(prediction_id: UUID, payload: PredictionResolve, supabase
     data = {
         "actual_value": payload.actual_value,
         "error_pct": payload.error_pct,
-        "resolved_at": "now()",
+        "resolved_at": _utc_now_iso(),
     }
     result = supabase.table("predictions").update(data).eq("id", str(prediction_id)).execute()
     return result.data[0]

@@ -9,26 +9,55 @@ interface ImageUploadProps {
   label?: string;
 }
 
+const IMAGE_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
+
     setUploading(true);
     setError(null);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("article-images").upload(path, file);
+      const extension = IMAGE_TYPES[file.type];
+      if (!extension) {
+        throw new Error("Use a JPG, PNG, WebP, or GIF image.");
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error("Image must be 5 MB or smaller.");
+      }
+
+      const path = `${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("article-images")
+        .upload(path, file, {
+          cacheControl: "3600",
+          contentType: file.type,
+          upsert: false,
+        });
       if (uploadError) throw uploadError;
+
       const { data } = supabase.storage.from("article-images").getPublicUrl(path);
       onChange(data.publicUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed — check the article-images bucket exists and is public.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Upload failed. Confirm that this signed-in account is listed in the admins table.",
+      );
     } finally {
       setUploading(false);
+      input.value = "";
     }
   }
 
@@ -42,7 +71,7 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
           onChange={handleFile}
           disabled={uploading}
           className="text-small text-text-secondary file:mr-3 file:rounded-md file:border-0 file:bg-bg-hover file:px-3 file:py-1.5 file:text-small file:text-text-primary"

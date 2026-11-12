@@ -1,0 +1,22 @@
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/.env*.local
+
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/venv/
+backend/.venv/
+
+# Env
+.env
+*.env
+!.env.example
+
+# Local repair backups (never commit copies of replaced files)
+/.finoptiv-backup/
+
+# OS
+.DS_Store

@@ -1,79 +1,43 @@
 # Finoptiv
 
-Personal data-intelligence and research portfolio — case studies, writing, and
-a public system-design page, built on Next.js, FastAPI, and Supabase (all
-free-tier).
+Finoptiv is a data-intelligence and research portfolio built with Next.js, FastAPI, and Supabase.
 
-**Deploying for the first time? Start at [`DEPLOYMENT-GUIDE.md`](./DEPLOYMENT-GUIDE.md)
-— it's the exact, ordered checklist, written against this actual codebase.**
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSdsourab%2Ffinoptivbd&project-name=finoptivbd&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,SUPABASE_SECRET_KEY,NEXT_PUBLIC_OWNER_EMAIL)
 
-Full specification bundle: [`docs/`](./docs) (planning docs — DEPLOYMENT-GUIDE.md
-supersedes `docs/07-DEPLOYMENT-SETUP.md` now that the code exists).
+**Before deploying:** create a Supabase project, run the SQL migrations and seed file, and create the owner admin account. The Deploy Button then imports the repository into Vercel and asks for the required environment values. Follow [`DEPLOYMENT-GUIDE.md`](./DEPLOYMENT-GUIDE.md).
 
-## Status
+## Architecture
 
-- [x] `supabase/` — database schema (MVP + Phase 2/3, across two migrations)
-      + seed data
-- [x] `backend/` — FastAPI service: public reads, search, JWT-gated admin
-      CRUD (articles, services, predictions, pipeline runs) — 9 passing tests
-- [x] `frontend/` — Next.js app: all MVP routes + Phase 2 (reproducibility
-      badge, run-it-yourself, gated download, pipeline widget) + Phase 3
-      (predictions ledger, services page, trigram search) + admin CMS.
-      Builds and lints clean.
-- [ ] Deployment — needs your Supabase/GitHub/Vercel accounts; see
-      `DEPLOYMENT-GUIDE.md`
-- [ ] Real content — no case studies/posts exist yet; add them via `/admin`
-      after deploying. 4 service rows are seeded but inactive — review and
-      turn on the ones you want live.
-
-## What's genuinely done vs. what's still on you
-
-Done and verified in this repo: schema, backend (tested), frontend (builds +
-lints clean), CI config, keep-alive config.
-
-Only you can do these — they need your own accounts/credentials, which this
-environment has no access to:
-- Create the Supabase project and run the migrations
-- Push this code to your GitHub
-- Connect your Vercel project (one project, two services — see
-  `DEPLOYMENT-GUIDE.md`) and set its environment variables
-- Set your real contact email (`NEXT_PUBLIC_OWNER_EMAIL` — currently a
-  placeholder, see `DEPLOYMENT-GUIDE.md` step 7)
-
-`DEPLOYMENT-GUIDE.md` walks through every one of those, in order, with exact
-values to paste.
+- `frontend/` — Next.js App Router and Tailwind CSS
+- `backend/` — FastAPI API deployed as a Vercel Python service
+- `supabase/` — ordered Postgres migrations, RLS policies, and seed data
+- `vercel.json` — a single Vercel Services deployment and same-domain API routing
 
 ## Local development
 
-**Option A — matches production exactly** (needs the Vercel CLI:
-`npm i -g vercel`, then `vercel link` once inside the repo to connect it to
-your Vercel project):
-```bash
-vercel dev
-```
-This runs both services together with the same `/api/backend/*` routing
-used in production.
-
-**Option B — run them separately** (no Vercel CLI needed):
+For a production-like local run, install the Vercel CLI and run `vercel dev` from the repository root. For separate development servers, see the commands below.
 
 Backend:
+
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate   # or: .venv\Scripts\activate on Windows
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # fill in real Supabase values
-uvicorn app.main:app --reload   # serves at http://localhost:8000/api/backend/...
+uvicorn app.main:app --reload
 ```
 
-Frontend (separate terminal):
+Frontend (in a second terminal):
+
 ```bash
 cd frontend
-npm install
-cp .env.example .env.local
-# also set: NEXT_PUBLIC_API_URL=http://localhost:8000
+npm ci
 npm run dev
 ```
 
-If `npm run dev` is slow or unstable on a low-RAM machine, you don't strictly
-need it day to day — Vercel builds and previews every push in the cloud, so
-small edits can go straight to a git commit + push instead of a local server. it okay the file 
+Set the environment variables from `backend/.env.example` and `frontend/.env.example`. For separate local servers, set `NEXT_PUBLIC_API_URL=http://localhost:8000` in the frontend environment.
+
+## Quality checks
+
+GitHub Actions runs backend tests, frontend lint, and a production frontend build for every push and pull request.

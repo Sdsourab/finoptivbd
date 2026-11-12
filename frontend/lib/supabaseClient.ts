@@ -1,14 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Falls back to harmless placeholders when the real env vars aren't set yet
-// (local dev before Supabase is connected, or a build running without
-// secrets) — createClient() throws immediately on an empty URL, which would
-// otherwise crash the entire `next build`, not just the admin page. With a
-// placeholder, the build succeeds and only actual sign-in attempts fail
-// (with a clear network error) until the real values are set.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+// Current Supabase publishable key first; legacy anon key remains supported
+// so existing projects can migrate without changing their login accounts.
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "placeholder-public-key";
 
-// Frontend-side Supabase Auth only — used solely by the /admin login flow.
-// This client never sees the service-role key and never bypasses RLS.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Browser-side client only. The server-only SUPABASE_SECRET_KEY is never read
+// here and must never be prefixed with NEXT_PUBLIC_.
+export const supabase = createClient(supabaseUrl, supabaseKey);

@@ -11,6 +11,7 @@ const NAV_LINKS = [
   { href: "/writing", label: "Writing" },
   { href: "/predictions", label: "Predictions" },
   { href: "/services", label: "Services" },
+  { href: "/system-design", label: "System Design" },
   { href: "/about", label: "About" },
 ];
 
@@ -75,7 +76,6 @@ export function Navbar() {
         )}
       </header>
 
-      {/* Mobile: persistent bottom Hire Me bar, per docs/01-DESIGN-SYSTEM.md */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-bg-card p-3 md:hidden">
         <HireMeButton fullWidth />
       </div>
