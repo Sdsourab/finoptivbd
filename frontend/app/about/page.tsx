@@ -1,45 +1,4 @@
-"use client";
-
-import dynamic from "next/dynamic";
-import { PipelineStatusWidget } from "@/components/PipelineStatusWidget";
-
-const RetroWindowFrame = dynamic(() =>
-  import("@/components/retro/RetroWindowFrame").then((m) => m.RetroWindowFrame)
-);
-const RetroSidebar = dynamic(() => import("@/components/retro/RetroSidebar").then((m) => m.RetroSidebar));
-const HalftoneChart = dynamic(() => import("@/components/retro/HalftoneChart").then((m) => m.HalftoneChart));
-
-export default function AboutPage() {
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-16 md:px-6">
-      <RetroWindowFrame title="~/about">
-        <div className="flex flex-col gap-8 md:flex-row">
-          <RetroSidebar />
-          <div className="flex-1">
-            <HalftoneChart />
-            <h1 className="mt-6 font-display text-display-2 font-semibold">About</h1>
-            <p className="mt-4 text-body leading-relaxed text-pure-white/85">
-              Finoptiv is one person&apos;s applied-analytics practice: causal inference, bibliometric analysis,
-              actuarial modeling, NLP topic modeling, and a live news-collection pipeline — real projects,
-              documented the way they actually happened, not cleaned up for a highlight reel.
-            </p>
-            <p className="mt-4 text-body leading-relaxed text-pure-white/85">
-              The bet behind this site is simple: showing the work — problem, data, method, result, and what
-              it meant — says more than a list of skills ever could.
-            </p>
-          </div>
-        </div>
-      </RetroWindowFrame>
-
-      <div className="mt-10">
-        <h2 className="font-display text-display-4 font-medium">Live systems</h2>
-        <p className="mt-2 text-small text-text-muted">
-          Real status from data-collection pipelines behind the site&apos;s content — not a mockup.
-        </p>
-        <div className="mt-6">
-          <PipelineStatusWidget />
-        </div>
-      </div>
-    </div>
-  );
-}
+import Link from "next/link";
+import { HireMeButton } from "@/components/HireMeButton";
+export const metadata={title:"About Finoptiv",description:"About Finoptiv and Sourav Dey Soptom — a business and data analytics practice combining management, data, and technology."};
+export default function AboutPage(){return <div className="mx-auto max-w-5xl px-4 py-16 md:px-6 md:py-20"><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">About</p><h1 className="mt-3 max-w-3xl font-display text-display-2 font-semibold">Business thinking, data work, and technology in one place.</h1><p className="mt-5 max-w-3xl text-lg leading-8 text-text-secondary">Finoptiv is a focused analytics practice built by Sourav Dey Soptom to turn business questions into clearer analysis, better dashboards, useful forecasts, and practical technology solutions.</p><div className="mt-12 grid gap-6 md:grid-cols-2"><section className="rounded-2xl border border-white/10 bg-bg-card p-7"><p className="font-mono text-caption uppercase tracking-wide text-lime-accent">The approach</p><h2 className="mt-3 font-display text-display-3 font-medium">Start from the decision.</h2><p className="mt-4 text-small leading-6 text-text-secondary">Good analytics is not a collection of charts. It starts with what someone needs to decide, then works backward to the data, method, output, and recommendation.</p></section><section className="rounded-2xl border border-white/10 bg-bg-card p-7"><p className="font-mono text-caption uppercase tracking-wide text-lime-accent">The stack</p><h2 className="mt-3 font-display text-display-3 font-medium">Business × Data × Technology.</h2><p className="mt-4 text-small leading-6 text-text-secondary">SQL, Python, business analysis, data visualization, forecasting, AI, and web-based analytical tools are used where they genuinely improve the outcome.</p></section></div><section className="mt-8 rounded-3xl border border-lime-accent/20 bg-gradient-to-br from-bg-card to-bg-main p-8 md:p-10"><p className="font-mono text-caption uppercase tracking-wide text-lime-accent">Founder / analyst</p><h2 className="mt-3 font-display text-display-2 font-semibold">Sourav Dey Soptom</h2><p className="mt-4 max-w-3xl text-body leading-7 text-text-secondary">A BBA Management student and technology-focused builder interested in business analysis, data analytics, management information systems, AI, and practical digital products.</p><div className="mt-6 flex flex-wrap gap-3"><HireMeButton pageTitle="About"/><Link href="/work" className="inline-flex items-center rounded-md border border-white/15 px-5 py-2.5 text-small font-semibold hover:bg-white/5">Explore the work →</Link></div></section></div>}

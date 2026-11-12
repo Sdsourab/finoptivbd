@@ -1,0 +1,3 @@
+import { ServiceDetail } from "@/components/ServiceDetail";
+export const metadata={title:"Dashboards & BI",description:"KPI dashboards and business intelligence reporting designed for management decisions."};
+export default function Page(){return <ServiceDetail title="Dashboards & BI" description="Build dashboards that answer management questions quickly—KPIs first, visuals second." deliverables={["KPI framework and metric definitions","Executive and operational dashboard layouts","Interactive charts and drill-down views","Reporting-ready insights and recommendations"]} bestFor={["Management spends too much time compiling reports","Important KPIs are scattered across files","A team needs one clearer view of business performance"]} pageTitle="Dashboards & BI"/>}

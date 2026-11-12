@@ -1,54 +1,7 @@
 import Link from "next/link";
 import { HireMeButton } from "@/components/HireMeButton";
 import { getServices } from "@/lib/api";
-
-export const revalidate = 60;
-export const metadata = { title: "Services" };
-
-// Phase 3. Prices are never invented — a service without a
-// starting_price_usd shows "Contact for pricing" instead of a fabricated number.
-export default async function ServicesPage() {
-  const services = await getServices().catch(() => []);
-
-  return (
-    <div className="mx-auto max-w-4xl px-4 py-16 md:px-6">
-      <h1 className="font-display text-display-2 font-semibold">Services</h1>
-      <p className="mt-2 max-w-2xl text-body text-text-secondary">
-        Consulting and one-off project work, grounded in the methods shown in{" "}
-        <Link href="/work" className="text-lime-accent hover:underline">
-          Work
-        </Link>
-        .
-      </p>
-
-      {services.length > 0 ? (
-        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {services.map((s) => (
-            <div key={s.id} className="flex flex-col rounded-lg border border-white/8 bg-bg-card p-6">
-              <h2 className="font-display text-display-4 font-medium text-text-primary">{s.name}</h2>
-              <p className="mt-2 flex-1 text-small text-text-secondary">{s.description}</p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="font-mono text-small text-lime-accent">
-                  {s.starting_price_usd != null ? `From $${s.starting_price_usd}` : "Contact for pricing"}
-                </span>
-                {s.related_case_study_slug && (
-                  <Link href={`/work/${s.related_case_study_slug}`} className="text-caption text-text-muted hover:text-text-primary">
-                    See the case study →
-                  </Link>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mt-10 text-body text-text-muted">
-          Nothing formally listed yet — reach out directly and we can scope it together.
-        </p>
-      )}
-
-      <div className="mt-14">
-        <HireMeButton pageTitle="Services" />
-      </div>
-    </div>
-  );
-}
+import { SERVICES } from "@/lib/constants";
+export const revalidate=60;
+export const metadata={title:"Business & Data Analytics Services",description:"Explore Finoptiv services for data analysis, business analysis, dashboards, forecasting, SQL/Python, and AI-enabled analytics."};
+export default async function ServicesPage(){const services=await getServices().catch(()=>[]);return <div className="mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-20"><div className="max-w-3xl"><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">Services</p><h1 className="mt-3 font-display text-display-2 font-semibold">Business & Data Analytics solutions.</h1><p className="mt-4 text-body leading-7 text-text-secondary">Practical support for teams that need cleaner data, clearer reporting, stronger analysis, and better decisions.</p></div><div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{SERVICES.map((s,i)=><Link key={s.href} href={s.href} className="group rounded-2xl border border-white/10 bg-bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-lime-accent/40 hover:bg-bg-hover"><div className="font-mono text-caption text-lime-accent">0{i+1}</div><h2 className="mt-8 font-display text-display-4 font-medium group-hover:text-lime-accent">{s.title}</h2><p className="mt-3 text-small leading-6 text-text-secondary">{s.short}</p><div className="mt-6 text-caption font-semibold text-white/70 group-hover:text-white">Learn more →</div></Link>)}</div>{services.length>0&&<section className="mt-20"><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">Live catalogue</p><h2 className="mt-3 font-display text-display-3 font-medium">Published service offerings</h2><div className="mt-8 grid gap-5 md:grid-cols-2">{services.map(s=><div key={s.id} className="rounded-2xl border border-white/10 bg-bg-card p-6"><h3 className="font-display text-display-4 font-medium">{s.name}</h3><p className="mt-2 text-small text-text-secondary">{s.description}</p><div className="mt-5 font-mono text-small text-lime-accent">{s.starting_price_usd!=null?`From $${s.starting_price_usd}`:"Contact for pricing"}</div></div>)}</div></section>}<section className="mt-16 rounded-3xl border border-lime-accent/20 bg-bg-card p-8 md:p-10"><h2 className="font-display text-display-3 font-medium">Have a specific business problem?</h2><p className="mt-3 max-w-2xl text-small leading-6 text-text-secondary">Start with the problem and the data you already have. We can scope the analysis around the decision you actually need to make.</p><div className="mt-6"><HireMeButton pageTitle="Services"/></div></section></div>}

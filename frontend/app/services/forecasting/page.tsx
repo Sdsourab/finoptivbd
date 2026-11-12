@@ -1,0 +1,3 @@
+import { ServiceDetail } from "@/components/ServiceDetail";
+export const metadata={title:"Forecasting",description:"Sales, demand, revenue, and scenario forecasting for better planning and resource decisions."};
+export default function Page(){return <ServiceDetail title="Forecasting" description="Use historical patterns and business context to estimate what may happen next and plan around uncertainty." deliverables={["Demand and sales forecasting","Time-series analysis","Scenario and sensitivity analysis","Forecast evaluation and communication"]} bestFor={["You need better planning from historical data","Demand changes are hard to anticipate","Management wants scenarios, not just a single number"]} pageTitle="Forecasting"/>}

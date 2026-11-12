@@ -2,62 +2,29 @@ import Link from "next/link";
 import { Hero } from "@/components/Hero";
 import { SearchBox } from "@/components/SearchBox";
 import { ArticleCard } from "@/components/ArticleCard";
+import { BrandProof } from "@/components/BrandProof";
+import { HireMeButton } from "@/components/HireMeButton";
 import { getArticles } from "@/lib/api";
-
+import { SERVICES } from "@/lib/constants";
 export const revalidate = 60;
-
+export const metadata = { title: "Business & Data Analytics Solutions", description: "Finoptiv provides business analysis, data analytics, dashboards, forecasting, SQL/Python solutions, and practical AI-enabled analytics." };
+const steps = [["01","Understand the problem","We start with the business question, not the chart."],["02","Work with the data","Clean, structure, explore, and test the evidence."],["03","Build the insight","Turn analysis into dashboards, forecasts, and clear findings."],["04","Support the decision","Deliver recommendations that a real team can use."]];
 export default async function HomePage() {
-  const [caseStudies, posts] = await Promise.all([
-    getArticles({ content_type: "case_study" }).catch(() => []),
-    getArticles({ content_type: "blog_post" }).catch(() => []),
-  ]);
-
-  const featured = caseStudies.slice(0, 3);
-  const recent = posts.slice(0, 3);
-
-  return (
-    <>
-      <Hero />
-
-      <div className="mx-auto max-w-6xl px-4 pt-10 md:px-6">
-        <SearchBox />
-      </div>
-
-      <section className="mx-auto max-w-6xl px-4 py-16 md:px-6">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-display-3 font-medium">Featured case studies</h2>
-          <Link href="/work" className="text-small text-lime-accent hover:underline">
-            View all work →
-          </Link>
-        </div>
-        {featured.length > 0 ? (
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {featured.map((a) => (
-              <ArticleCard key={a.id} article={a} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-6 text-body text-text-muted">No case studies published yet — check back soon.</p>
-        )}
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-display-3 font-medium">Recent writing</h2>
-          <Link href="/writing" className="text-small text-lime-accent hover:underline">
-            View all writing →
-          </Link>
-        </div>
-        {recent.length > 0 ? (
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {recent.map((a) => (
-              <ArticleCard key={a.id} article={a} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-6 text-body text-text-muted">No posts yet — the first one&apos;s coming.</p>
-        )}
-      </section>
-    </>
-  );
+  const [caseStudies, posts] = await Promise.all([getArticles({ content_type: "case_study" }).catch(() => []), getArticles({ content_type: "blog_post" }).catch(() => [])]);
+  const featured = caseStudies.slice(0, 3), recent = posts.slice(0, 3);
+  return (<>
+    <Hero />
+    <section className="mx-auto max-w-6xl px-4 pt-14 md:px-6"><div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-bg-card/70 p-3 md:grid-cols-4">{[["Business","Analysis"],["Data","Analytics"],["Decision","Dashboards"],["Forecast","Intelligence"]].map(([a,b]) => <div key={a+b} className="rounded-xl bg-bg-main/60 p-4"><div className="font-mono text-caption uppercase tracking-wide text-text-muted">{a}</div><div className="mt-1 text-small font-semibold text-white">{b}</div></div>)}</div></section>
+    <section className="mx-auto max-w-6xl px-4 py-20 md:px-6"><div className="max-w-2xl"><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">What Finoptiv does</p><h2 className="mt-3 font-display text-display-2 font-semibold">Analytics that connects to a business decision.</h2><p className="mt-4 text-body text-text-secondary">From messy data to a clear answer: analysis, dashboards, forecasting, automation, and practical business recommendations.</p></div>
+      <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{SERVICES.map((service,index)=><Link key={service.href} href={service.href} className="group rounded-2xl border border-white/10 bg-bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-lime-accent/40 hover:bg-bg-hover"><div className="font-mono text-caption text-lime-accent">0{index+1}</div><h3 className="mt-8 font-display text-display-4 font-medium text-white group-hover:text-lime-accent">{service.title}</h3><p className="mt-3 text-small leading-6 text-text-secondary">{service.short}</p><div className="mt-6 text-caption font-semibold text-white/70 group-hover:text-white">Explore service →</div></Link>)}</div>
+    </section>
+    <BrandProof />
+    <section className="mx-auto max-w-6xl px-4 py-20 md:px-6"><div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"><div><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">Case studies</p><h2 className="mt-3 font-display text-display-2 font-semibold">Proof before promises.</h2></div><Link href="/work" className="text-small font-semibold text-lime-accent hover:underline">View all work →</Link></div>
+      {featured.length>0?<div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">{featured.map(a=><ArticleCard key={a.id} article={a}/>)}</div>:<div className="mt-10 rounded-2xl border border-white/10 bg-bg-card p-8"><p className="text-body text-text-secondary">Case studies are being organized into the public work library. The site is ready for new projects and analysis write-ups.</p></div>}
+    </section>
+    <section className="mx-auto max-w-6xl px-4 py-20 md:px-6"><div className="grid gap-6 md:grid-cols-4">{steps.map(([n,t,s])=><div key={n} className="rounded-2xl border border-white/10 bg-bg-card p-6"><div className="font-mono text-caption text-lime-accent">{n}</div><h3 className="mt-8 font-display text-display-4 font-medium">{t}</h3><p className="mt-3 text-small leading-6 text-text-secondary">{s}</p></div>)}</div></section>
+    <section className="mx-auto max-w-6xl px-4 py-20 md:px-6"><div className="grid gap-8 rounded-3xl border border-lime-accent/20 bg-gradient-to-br from-bg-card to-bg-main p-8 md:grid-cols-[1fr_auto] md:items-center md:p-12"><div><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">Meet the analyst</p><h2 className="mt-3 font-display text-display-2 font-semibold">Sourav Dey Soptom</h2><p className="mt-4 max-w-2xl text-body leading-7 text-text-secondary">Business & Data Analytics practitioner building practical solutions at the intersection of management, data, and technology. The goal is simple: make complex information easier to trust, understand, and act on.</p><div className="mt-6 flex flex-wrap gap-2 font-mono text-caption uppercase tracking-wide text-white/55"><span className="rounded-full border border-white/10 px-3 py-1.5">Business Analysis</span><span className="rounded-full border border-white/10 px-3 py-1.5">SQL</span><span className="rounded-full border border-white/10 px-3 py-1.5">Python</span><span className="rounded-full border border-white/10 px-3 py-1.5">BI</span><span className="rounded-full border border-white/10 px-3 py-1.5">AI</span></div></div><Link href="/about" className="inline-flex items-center justify-center rounded-md border border-white/15 px-5 py-2.5 text-small font-semibold text-white hover:bg-white/5">About Finoptiv →</Link></div></section>
+    <section className="mx-auto max-w-6xl px-4 pb-20 md:px-6"><div className="flex items-end justify-between gap-5"><div><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">Insights</p><h2 className="mt-3 font-display text-display-2 font-semibold">Useful thinking, not filler.</h2></div><Link href="/writing" className="text-small font-semibold text-lime-accent hover:underline">View writing →</Link></div><div className="mt-8"><SearchBox /></div>{recent.length>0&&<div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">{recent.map(a=><ArticleCard key={a.id} article={a}/>)}</div>}</section>
+    <section className="border-t border-white/10 bg-deep-forest-green"><div className="mx-auto max-w-6xl px-4 py-20 md:px-6 md:py-24"><p className="font-mono text-caption uppercase tracking-[0.18em] text-lime-accent">Ready to work together?</p><h2 className="mt-3 max-w-3xl font-display text-display-2 font-semibold text-white">Bring the business question. Finoptiv will help turn it into something measurable.</h2><p className="mt-4 max-w-2xl text-body text-white/70">Click Hire Me and Finoptiv will notify Sourav directly so the conversation can start.</p><div className="mt-7"><HireMeButton pageTitle="Homepage CTA" /></div></div></section>
+  </>);
 }

@@ -1,0 +1,3 @@
+import { ServiceDetail } from "@/components/ServiceDetail";
+export const metadata={title:"Business Analysis",description:"Business analysis for requirements, process understanding, problem framing, and data-backed decision support."};
+export default function Page(){return <ServiceDetail title="Business Analysis" description="Connect business goals to measurable requirements, processes, data, and decisions." deliverables={["Problem framing and requirement discovery","Process and KPI mapping","Decision-support analysis","Business recommendations and documentation"]} bestFor={["A business process feels unclear or inefficient","Stakeholders have different definitions of success","You need analysis that connects management goals to data"]} pageTitle="Business Analysis"/>}
